@@ -66,9 +66,7 @@ sumOfSquares x y = x * x + y * y
 -}
 -- DON'T FORGET TO SPECIFY THE TYPE IN HERE
 lastDigit :: Int -> Int
-lastDigit n = mod m 10
-  where
-    m = abs n
+lastDigit n = abs n `mod` 10
 
 {- | Write a function that takes three numbers and returns the
 difference between the biggest number and the smallest one.
@@ -106,7 +104,7 @@ string.
 subString :: Int -> Int -> String -> String
 subString start end str = take len $ drop start str
   where
-    begin = if start < 0 then 0 else start
+    begin = max 0 start
     len = end - begin + 1
 
 {- | Write a function that takes a String — space separated numbers,
@@ -120,8 +118,7 @@ The string contains only spaces and/or numbers.
 strSum :: String -> Int
 strSum str = sum nums
   where
-    nums = map parse $ words str
-    parse = \x -> read x :: Int
+    nums = map read $ words str
 
 {- | Write a function that takes a number and a list of numbers and
 returns a string, saying how many elements of the list are strictly
@@ -145,6 +142,7 @@ lowerAndGreater n list = go 0 0 list
       | n > x = go nless (1 + nge) xs
       | n < x = go (1 + nless) nge xs
       | n == x = go nless nge xs
+      | otherwise = undefined  -- shouldn't happen
       where
         x = head l
         xs = tail l
