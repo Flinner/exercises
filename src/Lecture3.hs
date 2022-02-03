@@ -52,7 +52,7 @@ data Weekday
     | Friday
     | Saturday
     | Sunday
-    deriving (Show, Eq)
+    deriving (Show, Eq, Bounded, Enum)
 
 {- | Write a function that will display only the first three letters
 of a weekday.
@@ -60,7 +60,8 @@ of a weekday.
 >>> toShortString Monday
 "Mon"
 -}
-toShortString = error "TODO"
+toShortString :: Weekday -> String
+toShortString a = take 3 $ show a
 
 {- | Write a function that returns next day of the week, following the
 given day.
@@ -82,7 +83,12 @@ Tuesday
   would work for **any** enumeration type in Haskell (e.g. 'Bool',
   'Ordering') and not just 'Weekday'?
 -}
-next = error "TODO"
+
+next :: (Enum a, Bounded a) => a -> a
+next a
+ | fromEnum a == fromEnum (maxBound `asTypeOf` a) = minBound `asTypeOf` a
+ | otherwise  = succ a
+
 
 {- | Implement a function that calculates number of days from the first
 weekday to the second.
@@ -92,7 +98,12 @@ weekday to the second.
 >>> daysTo Friday Wednesday
 5
 -}
-daysTo = error "TODO"
+-- is recursion a good solution?
+daysTo :: Weekday -> Weekday -> Int
+daysTo = go 0
+    where go acc start end
+            | start == end = acc
+            | otherwise  =  go (acc + 1) (next start) end
 
 {-
 
@@ -108,9 +119,11 @@ newtype Gold = Gold
 
 -- | Addition of gold coins.
 instance Semigroup Gold where
+  (<>) a b = Gold $ unGold a + unGold b
 
 
 instance Monoid Gold where
+  mempty = Gold 0
 
 
 {- | A reward for completing a difficult quest says how much gold
@@ -125,9 +138,14 @@ data Reward = Reward
     } deriving (Show, Eq)
 
 instance Semigroup Reward where
+  (<>) a b = Reward gold special
+    where
+      gold  = rewardGold a <> rewardGold b
+      special = rewardSpecial a && rewardSpecial b
 
 
 instance Monoid Reward where
+  mempty = Reward (mempty :: Gold) True
 
 
 {- | 'List1' is a list that contains at least one element.
@@ -137,11 +155,13 @@ data List1 a = List1 a [a]
 
 -- | This should be list append.
 instance Semigroup (List1 a) where
+    (<>) (List1 a as) (List1 b bs)= List1 a (as <> (b:bs)) -- what is b? test passes without using it
 
 
 {- | Does 'List1' have the 'Monoid' instance? If no then why?
 
 instance Monoid (List1 a) where
+no type constraint on 'a', so can't find mempty for all types (some may not have)?
 -}
 
 {- | When fighting a monster, you can either receive some treasure or
@@ -159,10 +179,14 @@ monsters, you should get a combined treasure and not just the first
 🕯 HINT: You may need to add additional constraints to this instance
   declaration.
 -}
-instance Semigroup (Treasure a) where
+instance Semigroup a => Semigroup (Treasure a) where
+  (<>) NoTreasure t = t
+  (<>) t NoTreasure  = t
+  (<>) (SomeTreasure t1) (SomeTreasure t2)= SomeTreasure $ t1 <> t2
 
 
-instance Monoid (Treasure a) where
+instance Semigroup a => Monoid (Treasure a) where
+  mempty = NoTreasure
 
 
 {- | Abstractions are less helpful if we can't write functions that
@@ -181,7 +205,14 @@ together only different elements.
 Product {getProduct = 6}
 
 -}
-appendDiff3 = error "TODO"
+appendDiff3 :: ( Eq a) =>[a] -> [a] -> [a] -> [a]
+appendDiff3 a b c = a <> bunique <> cunique
+   where bunique | a /= b = b
+                 | otherwise = mempty `asTypeOf` b
+         cunique | a /= c && b /= c  = c
+                 | otherwise = mempty `asTypeOf` c
+
+
 
 {-
 
@@ -213,8 +244,14 @@ types that can have such an instance.
 -- instance Foldable Weekday where
 -- instance Foldable Gold where
 -- instance Foldable Reward where
--- instance Foldable List1 where
--- instance Foldable Treasure where
+instance Foldable List1 where
+  foldr f b (List1 a (x:xs)) = f x $ foldr f b $ List1 a xs
+  foldr _ b (List1 _ _) = b
+  foldMap f a = foldr (<>) mempty $ fmap f a
+instance Foldable Treasure where
+  foldr f b (SomeTreasure a)= f a b
+  foldr _ b NoTreasure = b
+  foldMap f a = foldr (<>) mempty $ fmap f a
 
 {-
 
@@ -229,8 +266,11 @@ types that can have such an instance.
 -- instance Functor Weekday where
 -- instance Functor Gold where
 -- instance Functor Reward where
--- instance Functor List1 where
--- instance Functor Treasure where
+instance Functor List1 where
+  fmap f  (List1 a as) = List1 (f a) $ map f as
+instance Functor Treasure where
+  fmap _ NoTreasure = NoTreasure
+  fmap f (SomeTreasure a) = SomeTreasure $ f a
 
 {- | Functions are first-class values in Haskell. This means that they
 can be even stored inside other data types as well!
@@ -249,4 +289,5 @@ Just [8,9,10]
 [8,20,3]
 
 -}
-apply = error "TODO"
+apply :: (Functor f) => f a -> (a -> b) -> f b
+apply a f= fmap f a
