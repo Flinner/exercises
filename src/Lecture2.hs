@@ -79,12 +79,11 @@ return the removed element.
 -}
 removeAt :: Int -> [a] -> (Maybe a, [a])
 removeAt i l
-  | i < 0  =  go before after (-1 :: Int) -- detect negative numbers
+  | i < 0  =  (Nothing, l)
   | otherwise = go before after  i
   where
     (before, after) = splitAt i l
     go xs [] _ = (Nothing, xs) -- n is too large
-    go a (_ : _) (-1) = (Nothing, a ++ after) -- n is negative
     go a (x : xs) _ = (Just x, a ++ xs) -- n is in the 'correct' range
 
 {- | Write a function that takes a list of lists and returns only
