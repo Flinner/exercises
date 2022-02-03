@@ -76,7 +76,9 @@ return the removed element.
 (Nothing,[1,2,3,4,5])
 -}
 removeAt :: Int -> [a] -> (Maybe a, [a])
-removeAt i l = go before after $ max i (-1) -- detect negative numbers
+removeAt i l
+  | i < 0  =  go before after (-1 :: Int) -- detect negative numbers
+  | otherwise = go before after  i
   where
     (before, after) = splitAt i l
     go xs [] _ = (Nothing, xs) -- n is too large
@@ -110,7 +112,7 @@ spaces.
 🕯 HINT: look into Data.Char and Prelude modules for functions you may use.
 -}
 dropSpaces :: String -> String
-dropSpaces = filter $ not . isSpace
+dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
 
 {- |
 
@@ -210,10 +212,9 @@ verify that.
 merge :: [Int] -> [Int] -> [Int]
 merge (x:xs) (y:ys) = a: merge as bs
   where a = min x y
-        (as,bs) =
-          if x == a
-          then (xs,y:ys)
-          else (x:xs, ys)
+        (as,bs)
+          | x == a = (xs,y:ys)
+          | otherwise =  (x:xs, ys)
 merge [] y = y
 merge x [] = x
 
@@ -326,13 +327,16 @@ Write a function that takes and expression and performs "Constant
 Folding" optimization on the given expression.
 -}
 constantFolding :: Expr -> Expr
-constantFolding = go 0
+constantFolding = toExpression . go (0, [])
   where
-    go :: Int -> Expr -> Expr
-    go acc (Add (Lit i1) (Lit i2)) =  Lit (acc + i1 + i2)
-    go acc (Add (Lit i) e2) = go (acc + i) e2
-    go acc (Add e1 (Lit i)) =  go (acc + i) e1
-    go acc e
-        | 0 == acc =  e
-        | otherwise  =  Add (Lit acc) e
+    toExpression :: (Int, [String]) -> Expr
+    toExpression (0, [s]) = Var s
+    toExpression (0, s:ss) = Add (Var s) (toExpression (0, ss))
+    toExpression (i, []) = Lit i
+    toExpression (i, ss) = Add (toExpression (i, [])) (toExpression (0, ss))
 
+    go :: (Int, [String]) -> Expr -> (Int, [String])
+    go (i,ss) (Lit a) = (i+a, ss)
+    go (i,ss) (Var s) = (i, s:ss)
+    go (i,ss) (Add e1 e2) = add (go (i,ss) e1) $ go (i,ss) e2
+      where add (i1,s1) (i2,s2) = (i1 + i2, s1 ++ s2)
