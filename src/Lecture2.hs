@@ -40,7 +40,9 @@ module Lecture2
     , constantFolding
     ) where
 
+-- VVV If you need to import libraries, do it after this line ... VVV
 import Data.Char (isSpace)
+-- ^^^ and before this line. Otherwise the test suite might fail  ^^^
 
 {- | Implement a function that finds a product of all the numbers in
 the list. But implement a lazier version of this function: if you see
@@ -113,6 +115,7 @@ spaces.
 -}
 dropSpaces :: String -> String
 dropSpaces = takeWhile (not . isSpace) . dropWhile isSpace
+
 
 {- |
 
