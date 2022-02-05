@@ -96,7 +96,6 @@ module Lecture4
     , calculateStats
     , printProductStats
     ) where
-
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.Read (readMaybe)
@@ -130,9 +129,30 @@ errors. We will simply return an optional result here.
 
 🕯 HINT: Use the 'readMaybe' function from the 'Text.Read' module.
 -}
-
 parseRow :: String -> Maybe Row
-parseRow = error "TODO"
+parseRow row = readRowMaybe $ row `splitBy` ','
+  where
+    readRowMaybe :: [String] -> Maybe Row
+  -- raw (not row) is not tested and maybe incorrect (example: rowCost = "String")
+    readRowMaybe [rawProd, rawTrade, rawCost] = maybeProd >>= \prod ->
+      maybeTrade >>= \trade ->
+      maybeCost >>= \cost ->
+      Just $ Row prod trade cost
+      where
+        maybeProd | rawProd == "" = Nothing | otherwise = Just rawProd
+        maybeTrade = readMaybe rawTrade
+        maybeCost= readMaybe rawCost >>= \cost -> if cost < 0 then Nothing else Just cost
+          
+    readRowMaybe _ = Nothing
+
+    splitBy :: String -> Char -> [String]
+    splitBy "" _ = []
+    splitBy s c = go s
+      where first = takeWhile (/=c)
+            next  = drop 1 . dropWhile (/=c)
+            go :: String -> [String]
+            go [] = []
+            go gs = first gs : go (next gs)
 
 {-
 We have almost all we need to calculate final stats in a simple and
