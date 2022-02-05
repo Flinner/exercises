@@ -174,6 +174,9 @@ string.
 If both strings have the same length, return the first one.
 -}
 instance Semigroup MaxLen where
+         (<>)  (MaxLen a) (MaxLen b)
+             | length a < length b = MaxLen b
+             | otherwise  = MaxLen b
 
 
 {-
