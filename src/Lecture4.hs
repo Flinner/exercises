@@ -103,8 +103,8 @@ import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.Read (readMaybe)
 import Control.Monad (join)
 import Data.List (intercalate)
-import Data.Maybe -- mapMaybe
-import System.Environment -- getArgs
+import Data.Maybe (mapMaybe)
+import System.Environment (getArgs)
 
 {- In this exercise, instead of writing the entire program from
 scratch, you're offered to complete the missing parts.
@@ -182,7 +182,7 @@ If both strings have the same length, return the first one.
 instance Semigroup MaxLen where
          (<>)  (MaxLen a) (MaxLen b)
              | length a < length b = MaxLen b
-             | otherwise  = MaxLen b
+             | otherwise  = MaxLen a
 
 
 {-
@@ -221,7 +221,7 @@ instance Semigroup Stats where
                 (combineMaybe  buymax1  buymax2    )
                 (combineMaybe  buymin1  buymin2    )
                 (longest1    <>         longest2   )
-  -- avoid memory leaks
+        -- combineMaybe avoid memory leaks
     where combineMaybe (Just !a) (Just !b) = Just $ a <> b
           combineMaybe (Just !a)  _        = Just a
           combineMaybe _         (Just !b) = Just b
@@ -248,8 +248,8 @@ rowToStats (Row prod trade cost) = Stats
                                 (Max cost)           -- abs max cost
                                 (Min cost)           -- abs min cost
                                 (maybeCost Sell Max) -- Sell Max
-                                (maybeCost Sell Min) -- Sell Min
-                                (maybeCost Buy Max)  -- Buy Max
+                                (maybeCost Sell Min) -- Sell Min -- either both Sell are Nothing
+                                (maybeCost Buy Max)  -- Buy Max  --  or both Buy are Nothing
                                 (maybeCost Buy Min)  -- Buy Min
                                 (MaxLen prod)
                                 where signedSum | trade == Buy = -cost | otherwise = cost
@@ -332,8 +332,8 @@ calculateStats = display . maybeNoneEmptyRows
     where
         maybeNoneEmptyRows = nonEmpty . mapMaybe parseRow . lines
 
-        display (Just rs) = displayStats $ combineRows rs
-        display Nothing = "File Doesn't have any product!"
+        display (Just rs) = displayStats $ combineRows rs -- is Eta reduce possible?
+        display Nothing = "File doesn't have any product!"
 
 
 {- The only thing left is to write a function with side-effects that
@@ -344,9 +344,7 @@ Use functions 'readFile' and 'putStrLn' here.
 -}
 
 printProductStats :: FilePath -> IO ()
-printProductStats path = do
-            content <- readFile path
-            putStrLn $ calculateStats content
+printProductStats path = readFile path >>= putStrLn . calculateStats -- is Eta reduce possible?
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
@@ -362,10 +360,7 @@ https://hackage.haskell.org/package/base-4.16.0.0/docs/System-Environment.html#v
 -}
 
 main :: IO ()
-main = do
-     args <- getArgs
-     let path = head args
-     printProductStats path
+main = getArgs >>= printProductStats . head
 
 
 {-
