@@ -204,6 +204,17 @@ instance for the 'Stats' type itself.
 -}
 
 instance Semigroup Stats where
+  (<>) (Stats positions1 sum1 absmax1 absmin1 sellmax1 sellmin1 buymax1 buymin1 longest1)
+       (Stats positions2 sum2 absmax2 absmin2 sellmax2 sellmin2 buymax2 buymin2 longest2)
+       = Stats (positions1<>positions2)
+                (sum1<>sum2)
+                (absmax1<>absmax2)
+                (absmin1<>absmin2)
+                (sellmax1<>sellmax2)
+                (sellmin1<>sellmin2)
+                (buymax1<>buymax2)
+                (buymin1<>buymin2)
+                (longest1<>longest2)
 
 
 {-
