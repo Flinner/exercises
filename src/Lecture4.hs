@@ -101,7 +101,7 @@ module Lecture4
 import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 import Data.Semigroup (Max (..), Min (..), Semigroup (..), Sum (..))
 import Text.Read (readMaybe)
-import Control.Monad (join)
+import Control.Monad (join, guard, (>=>))
 import Data.List (intercalate)
 import Data.Maybe (mapMaybe)
 import System.Environment (getArgs)
@@ -136,21 +136,14 @@ errors. We will simply return an optional result here.
 🕯 HINT: Use the 'readMaybe' function from the 'Text.Read' module.
 -}
 parseRow :: String -> Maybe Row
-parseRow row = readRowMaybe $ row `splitBy` ','
-  where
-    readRowMaybe :: [String] -> Maybe Row
-  -- raw (not row) is not tested and maybe incorrect (example: rowCost = "String")
-    readRowMaybe [rawProd, rawTrade, rawCost] = maybeProd >>= \prod ->
-      maybeTrade >>= \trade ->
-      maybeCost >>= \cost ->
-      Just $ Row prod trade cost
-      where
-        maybeProd | rawProd == "" = Nothing | otherwise = Just rawProd -- shouldn't be empty
-        maybeTrade = readMaybe rawTrade
-        maybeCost= readMaybe rawCost >>= \cost -> if cost < 0 then Nothing else Just cost -- shouldn't be negative
-
-    readRowMaybe _ = Nothing -- more/less than 3 items per row
-
+parseRow str = do
+            [rawProd, rawTrade, rawCost] <- Just (str `splitBy` ',')
+            guard $ rawProd /= ""
+            trade <- readMaybe  rawTrade
+            cost <-readMaybe rawCost
+            guard $ cost >= 0
+            pure $ Row rawProd trade cost
+    where
     splitBy :: String -> Char -> [String]
     splitBy "" _ = []
     splitBy s c = go s
@@ -222,10 +215,9 @@ instance Semigroup Stats where
                 (combineMaybe  buymin1  buymin2    )
                 (longest1    <>         longest2   )
         -- combineMaybe avoid memory leaks
-    where combineMaybe (Just !a) (Just !b) = Just $ a <> b
-          combineMaybe (Just !a)  _        = Just a
-          combineMaybe _         (Just !b) = Just b
-          combineMaybe _          _        = Nothing
+    where combineMaybe !a !b = case a <> b of
+            Nothing -> Nothing
+            Just !x -> Just x
 
 
 {-
@@ -306,8 +298,7 @@ displayStats (Stats positions totalSum absmax absmin sellmax sellmin buymax buym
                 , "Min spending           : " ++ showMaybe getMin buymin
                 , "Longest product name   : " ++ unMaxLen longest
                 ]
-                where showMaybe getMinOrMax (Just a) = show $ getMinOrMax a
-                      showMaybe _ Nothing = "no value"
+                where showMaybe getMinOrMax = maybe "no value" (show . getMinOrMax)
 
 
 {-
@@ -332,8 +323,8 @@ calculateStats = display . maybeNoneEmptyRows
     where
         maybeNoneEmptyRows = nonEmpty . mapMaybe parseRow . lines
 
-        display (Just rs) = displayStats $ combineRows rs -- is Eta reduce possible?
-        display Nothing = "File doesn't have any product!"
+        display = maybe "File doesn't have any products!"
+            (displayStats . combineRows)
 
 
 {- The only thing left is to write a function with side-effects that
@@ -344,7 +335,7 @@ Use functions 'readFile' and 'putStrLn' here.
 -}
 
 printProductStats :: FilePath -> IO ()
-printProductStats path = readFile path >>= putStrLn . calculateStats -- is Eta reduce possible?
+printProductStats = readFile >=> putStrLn . calculateStats
 
 {-
 Okay, I lied. This is not the last thing. Now, we need to wrap
