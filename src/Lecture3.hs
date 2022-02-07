@@ -61,7 +61,7 @@ of a weekday.
 "Mon"
 -}
 toShortString :: Weekday -> String
-toShortString a = take 3 $ show a
+toShortString = take 3 . show
 
 {- | Write a function that returns next day of the week, following the
 given day.
@@ -84,9 +84,9 @@ Tuesday
   'Ordering') and not just 'Weekday'?
 -}
 
-next :: (Enum a, Bounded a) => a -> a
+next :: (Eq a, Enum a, Bounded a) =>a -> a
 next a
- | fromEnum a == fromEnum (maxBound `asTypeOf` a) = minBound `asTypeOf` a
+ | a == maxBound = minBound
  | otherwise  = succ a
 
 
@@ -98,12 +98,10 @@ weekday to the second.
 >>> daysTo Friday Wednesday
 5
 -}
--- is recursion a good solution?
 daysTo :: Weekday -> Weekday -> Int
-daysTo = go 0
-    where go acc start end
-            | start == end = acc
-            | otherwise  =  go (acc + 1) (next start) end
+daysTo a b = if difference > 0 then difference else difference + 7
+    where difference = fromEnum b - fromEnum  a
+
 
 {-
 
@@ -145,7 +143,7 @@ instance Semigroup Reward where
 
 
 instance Monoid Reward where
-  mempty = Reward (mempty :: Gold) True
+  mempty = Reward mempty True
 
 
 {- | 'List1' is a list that contains at least one element.
@@ -155,7 +153,7 @@ data List1 a = List1 a [a]
 
 -- | This should be list append.
 instance Semigroup (List1 a) where
-    (<>) (List1 a as) (List1 b bs)= List1 a (as <> (b:bs)) -- what is b? test passes without using it
+    (<>) (List1 a as) (List1 b bs)= List1 a (as <> (b:bs))
 
 
 {- | Does 'List1' have the 'Monoid' instance? If no then why?
@@ -205,12 +203,12 @@ together only different elements.
 Product {getProduct = 6}
 
 -}
-appendDiff3 :: ( Eq a) =>[a] -> [a] -> [a] -> [a]
+appendDiff3 :: (Eq a, Monoid a) =>a -> a -> a -> a
 appendDiff3 a b c = a <> bunique <> cunique
    where bunique | a /= b = b
-                 | otherwise = mempty `asTypeOf` b
+                 | otherwise = mempty
          cunique | a /= c && b /= c  = c
-                 | otherwise = mempty `asTypeOf` c
+                 | otherwise = mempty
 
 
 
@@ -245,8 +243,7 @@ types that can have such an instance.
 -- instance Foldable Gold where
 -- instance Foldable Reward where
 instance Foldable List1 where
-  foldr f b (List1 a (x:xs)) = f x $ foldr f b $ List1 a xs
-  foldr _ b (List1 _ _) = b
+  foldr f b (List1 a xs) = foldr f b (a:xs)
   foldMap f a = foldr (<>) mempty $ fmap f a
 instance Foldable Treasure where
   foldr f b (SomeTreasure a)= f a b
@@ -289,5 +286,6 @@ Just [8,9,10]
 [8,20,3]
 
 -}
-apply :: (Functor f) => f a -> (a -> b) -> f b
-apply a f= fmap f a
+apply :: (Functor f) => a -> f (a -> b) -> f b
+apply a = fmap fn
+  where fn f = f a
